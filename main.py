@@ -12,13 +12,13 @@ def verify_certificate_chain(keybox):
 	pattern = r"-----BEGIN CERTIFICATE-----\n.*?\n-----END CERTIFICATE-----"
 	certificates = re.findall(pattern, keybox, re.DOTALL)
 	if len(certificates) < 2:
-		return "❓ Invalid certificate chain"
+		return "❓Недействительная цепочка сертификатов"
 	elif len(certificates) == 2:
 		certificates = {"end_entity": certificates[0], "root": certificates[1]}
 	elif len(certificates) == 3:
 		certificates = {"end_entity": certificates[0], "intermediate": certificates[1], "root": certificates[2]}
 	else:
-		return "❓ Invalid certificate chain"
+		return "❓Недействительная цепочка сертификатов"
 	with tempfile.NamedTemporaryFile(delete=True) as root_cert_file:
 		root_cert_file.write(certificates['root'].encode())
 		root_cert_file.flush()
@@ -34,9 +34,9 @@ def verify_certificate_chain(keybox):
 			with open("google_ca_pubkey.key", "r") as google_pubkey_file:
 				google_pubkey = google_pubkey_file.read()
 			if root_pubkey.stdout.encode() != google_pubkey.encode():
-				message = "❌ Root certificate is not signed by Google"
+				message = "❌ Корневой сертификат не подписан Google"
 			else:
-				message = "✅ Root certificate is signed by Google"
+				message = "✅ Корневой сертификат подписан Google"
 		with tempfile.NamedTemporaryFile(delete=True) as end_entity_cert_file:
 			end_entity_cert_file.write(certificates['end_entity'].encode())
 			end_entity_cert_file.flush()
@@ -58,9 +58,9 @@ def verify_certificate_chain(keybox):
 					text=True
 				)
 		if result.returncode != 0:
-			message += f"\n❌ Invalid certificate chain: {result.stderr}"
+			message += f"\n❌ Недействительная цепочка сертификатов: {result.stderr}"
 		else:
-			message += "\n✅ Certificate chain is valid"
+			message += "\n✅ Цепочка сертификатов действительна"
 		return message
 
 
@@ -82,13 +82,13 @@ def extract_certificate_information(cert_pem):
 	if match:
 		serial_number = hex(int(match.group(1).replace(":", ""), 16)).split("0x")[1]
 	else:
-		return "❌ Cannot find serial number"
+		return "❌ Не удалось найти серийный номер"
 	pattern = r"Subject: "
 	match = re.search(pattern, cert_text, re.IGNORECASE)
 	if match:
 		subject = cert_text[match.end():].split("\n")[0]
 	else:
-		return "❌ Cannot find subject"
+		return "❌ Не удалось найти субъект"
 	return [serial_number, subject]
 
 
@@ -98,21 +98,21 @@ def common_handler(message):
 	elif message.document:
 		document = message.document
 	else:
-		bot.reply_to(message, "Please reply to a message with a keybox file or send a keybox file")
+		bot.reply_to(message, "Пожалуйста, ответьте на сообщение с файлом keybox.xml или отправьте файл keybox.xml")
 		return None
 	file_info = bot.get_file(document.file_id)
 	file = requests.get('https://api.telegram.org/file/bot{0}/{1}'.format(API_TOKEN, file_info.file_path))
 	certificate = extract_certificate_information(file.text.split("<Certificate format=\"pem\">")[1].split("</Certificate>")[0])
-	reply = f"ℹ️ Serial Number: `{certificate[0]}`\nℹ️ Subject: `{certificate[1]}`"
+	reply = f"ℹ️ Серийный номер: `{certificate[0]}`\nℹ️ Субъект: `{certificate[1]}`"
 	reply += f"\n{verify_certificate_chain(file.text)}"
 	try:
 		status = get_google_sn_list()['entries'][certificate[0]]
-		reply += f"\n❌ Serial number found in Google's revoked keybox list\nReason: `{status['reason']}`"
+		reply += f"\n❌ Серийный номер найден в списке отозванных keybox для ключей Google\nПричина: `{status['reason']}`"
 	except KeyError:
 		if certificate[0] == "4097":
-			reply += "\n❌ AOSP keybox found, this keybox is untrusted"
+			reply += "\n❌ Обнаружен AOSP keybox, этот keybox для ключей ненадежен"
 		else:
-			reply += "\n✅ Serial number not found in Google's revoked keybox list"
+			reply += "\n✅ Серийный номер не найден в списке отозванных keybox для ключей Google"
 	bot.reply_to(message, reply, parse_mode='Markdown')
 
 
@@ -135,7 +135,7 @@ bot = telebot.TeleBot(API_TOKEN)
 
 @bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
-	bot.reply_to(message, "Send me keybox file and I will check if it's revoked")
+	bot.reply_to(message, "Пришлите мне keybox.xml файл и Я проверю, отозван ли он")
 
 
 @bot.message_handler(content_types=['document'])
