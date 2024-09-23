@@ -103,7 +103,7 @@ def common_handler(message):
 	file_info = bot.get_file(document.file_id)
 	file = requests.get('https://api.telegram.org/file/bot{0}/{1}'.format(API_TOKEN, file_info.file_path))
 	certificate = extract_certificate_information(file.text.split("<Certificate format=\"pem\">")[1].split("</Certificate>")[0])
-	reply = f"ℹ️ Serial Number: `{certificate[0]}`\nℹ️ Subject: `{certificate[1]}`"
+	reply = f"ℹ️ Серийный номер: `{certificate[0]}`\nℹ️ Субъект: `{certificate[1]}`"
 	reply += f"\n{verify_certificate_chain(file.text)}"
 	try:
 		status = get_google_sn_list()['entries'][certificate[0]]
