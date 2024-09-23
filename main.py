@@ -12,13 +12,13 @@ def verify_certificate_chain(keybox):
 	pattern = r"-----BEGIN CERTIFICATE-----\n.*?\n-----END CERTIFICATE-----"
 	certificates = re.findall(pattern, keybox, re.DOTALL)
 	if len(certificates) < 2:
-		return "❓Недействительная цепочка сертификатов"
+		return "❓ Invalid certificate chain"
 	elif len(certificates) == 2:
 		certificates = {"end_entity": certificates[0], "root": certificates[1]}
 	elif len(certificates) == 3:
 		certificates = {"end_entity": certificates[0], "intermediate": certificates[1], "root": certificates[2]}
 	else:
-		return "❓Недействительная цепочка сертификатов"
+		return "❓ Invalid certificate chain"
 	with tempfile.NamedTemporaryFile(delete=True) as root_cert_file:
 		root_cert_file.write(certificates['root'].encode())
 		root_cert_file.flush()
@@ -98,19 +98,19 @@ def common_handler(message):
 	elif message.document:
 		document = message.document
 	else:
-		bot.reply_to(message, "Пожалуйста, ответьте на сообщение с файлом keybox.xml или отправьте файл keybox.xml")
+		bot.reply_to(message, "Пожалуйста, ответьте на сообщение файлом keybox.xml или отправьте файл keybox.xml")
 		return None
 	file_info = bot.get_file(document.file_id)
 	file = requests.get('https://api.telegram.org/file/bot{0}/{1}'.format(API_TOKEN, file_info.file_path))
 	certificate = extract_certificate_information(file.text.split("<Certificate format=\"pem\">")[1].split("</Certificate>")[0])
-	reply = f"ℹ️ Серийный номер: `{certificate[0]}`\nℹ️ Субъект: `{certificate[1]}`"
+	reply = f"ℹ️ Serial Number: `{certificate[0]}`\nℹ️ Subject: `{certificate[1]}`"
 	reply += f"\n{verify_certificate_chain(file.text)}"
 	try:
 		status = get_google_sn_list()['entries'][certificate[0]]
 		reply += f"\n❌ Серийный номер найден в списке отозванных keybox для ключей Google\nПричина: `{status['reason']}`"
 	except KeyError:
 		if certificate[0] == "4097":
-			reply += "\n❌ Обнаружен AOSP keybox, этот keybox для ключей ненадежен"
+			reply += "\n❌ Обнаружен AOSP keybox, такой keybox не является доверенным"
 		else:
 			reply += "\n✅ Серийный номер не найден в списке отозванных keybox для ключей Google"
 	bot.reply_to(message, reply, parse_mode='Markdown')
@@ -135,7 +135,7 @@ bot = telebot.TeleBot(API_TOKEN)
 
 @bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
-	bot.reply_to(message, "Пришлите мне свой keybox файл и я проверю, отозван ли он")
+	bot.reply_to(message, "Пришлите мне свой keybox.xml файл и я проверю, отозван ли он")
 
 
 @bot.message_handler(content_types=['document'])
