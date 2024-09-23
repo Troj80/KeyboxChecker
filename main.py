@@ -135,7 +135,7 @@ bot = telebot.TeleBot(API_TOKEN)
 
 @bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
-	bot.reply_to(message, "Пришлите мне keybox.xml файл и Я проверю, отозван ли он")
+	bot.reply_to(message, "Пришлите мне свой keybox файл и я проверю, отозван ли он")
 
 
 @bot.message_handler(content_types=['document'])
